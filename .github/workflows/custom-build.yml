@@ -1,0 +1,58 @@
+name: Build Custom Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - '.custom/**'
+      - 'package*.json'
+      - 'gulpfile.js'
+      - '.github/workflows/custom-build.yml'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custom-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies with legacy lock compatibility
+        run: node .custom/install-deps.cjs
+
+      - name: Check runtime behavior
+        run: node --test .custom/test.cjs
+
+      - name: Build runtime package
+        run: node .custom/build.cjs
+
+      - name: Create runtime ZIP with aria2-webui root directory
+        run: python3 -m zipfile --create build/aria2-webui.zip build/aria2-webui
+
+      # GitHub's artifact download wraps this runtime ZIP in an outer ZIP.
+      - name: Upload runtime ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          name: aria2-webui-${{ github.run_id }}
+          path: build/aria2-webui.zip
+          if-no-files-found: error
+          compression-level: 0
