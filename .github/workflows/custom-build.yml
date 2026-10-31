@@ -14,7 +14,7 @@ on:
       - 'LICENSE'
 
 permissions:
-  contents: read
+  contents: write # Required to create the Release and upload its ZIP asset.
 
 concurrency:
   group: custom-build-${{ github.workflow }}-${{ github.ref }}
@@ -56,3 +56,50 @@ jobs:
           path: build/aria2-webui.zip
           if-no-files-found: error
           compression-level: 0
+
+      - name: Publish WebUI Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: webui-build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Aria2 + AriaNg WebUI (build ${{ github.run_number }})
+          files: build/aria2-webui.zip
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+          make_latest: true
+          body: |
+            Windows 本机 aria2 + AriaNg 完整运行包，基于提交 `${{ github.sha }}` 构建。
+
+            ### 下载和放置位置
+
+            下载本 Release 下的 **aria2-webui.zip**，将其解压到 **`%USERPROFILE%` 用户目录**。
+            ZIP 内已包含 `aria2-webui` 文件夹，解压后的入口应为：
+
+            ```text
+            C:\Users\<用户名>\aria2-webui\ecosystem.config.cjs
+            ```
+
+            例如当前用户名为 Rolin 时，运行包放在 `C:\Users\Rolin\aria2-webui`。
+            避免解压成两层 `aria2-webui\aria2-webui`。
+
+            ### 启动
+
+            前提：本机已安装 Scoop aria2、Node.js 22 或更新版本，以及 PM2。
+            运行包无需执行 `npm install`。在 PowerShell 中运行：
+
+            ```powershell
+            Set-Location "$env:USERPROFILE\aria2-webui"
+            pm2.cmd start .\ecosystem.config.cjs
+            ```
+
+            浏览器访问 **http://127.0.0.1:6880**，WebUI 自动连接配套的本机 RPC。
+
+            - Scoop aria2 默认位置：`%USERPROFILE%\scoop\apps\aria2\current\aria2c.exe`
+            - 配置、自动生成的 RPC 密钥和会话：`%USERPROFILE%\.aria2`
+            - 下载文件默认位置：`%USERPROFILE%\Downloads`
+            - 支持磁力和 BT，下载完成后停止做种。
+
+            升级时先执行 `pm2.cmd stop aria2-webui`，替换运行包文件后执行
+            `pm2.cmd restart aria2-webui`。保留用户目录下的 `.aria2` 配置和下载文件。
+            更多配置说明见包内 `README.md`。

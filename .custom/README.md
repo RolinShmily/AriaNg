@@ -10,8 +10,9 @@ Windows 上使用 Scoop 安装的 aria2，由一个 PM2 应用统一管理 aria2
 
 1. 推送本仓库中的自定义文件后，打开 GitHub **Actions → Build Custom Runtime → Run workflow**。
    `master` 分支的前端、依赖清单、构建脚本或 `.custom` 内容变化也会触发构建。
-2. 下载该次运行的 `aria2-webui-<运行编号>` Artifact，取出其中的 `aria2-webui.zip`。
-   GitHub 网页下载的 Artifact 自身也可能是一层 ZIP。
+2. 构建成功后会自动发布按构建编号命名的 **Aria2 + AriaNg WebUI** Release。
+   从仓库 **Releases** 下载 `aria2-webui.zip`，Release 说明中也包含放置路径和启动命令。
+   同时保留该次运行的 `aria2-webui-<运行编号>` Artifact；从 Actions 下载时自身可能另有一层 ZIP。
 3. 将运行包里的 `aria2-webui` 文件夹解压到用户目录，得到
    `C:\Users\<用户名>\aria2-webui\ecosystem.config.cjs`，避免多嵌套一层同名目录。
 4. 在 PowerShell 中执行：
@@ -128,6 +129,8 @@ node --test .custom/test.cjs
 安装后逐项检查版本、来源和 integrity，保持仓库 `package.json`、`package-lock.json` 不变，
 不解析升级依赖、不运行安装生命周期脚本。已有 `node_modules` 时可直接构建；该安装器会拒绝覆盖它。
 
-输出为 `build/aria2-webui/`；GitHub 再将它压缩成 `build/aria2-webui.zip`。
+输出为 `build/aria2-webui/`；GitHub 再将它压缩成 `build/aria2-webui.zip`，
+上传 Actions Artifact，并在工作流最后发布带有安装说明和 ZIP 附件的 Release。
+Release 标签为 `webui-build-<构建编号>`，指向本次构建提交；重新运行同一次构建时更新对应 Release。
 打包采用明确的文件列表，配置、会话、下载和本机密钥不会被收集。
 测试使用独立临时目录与端口；Windows 且 Scoop aria2 可用时运行真实 RPC 生命周期测试。
